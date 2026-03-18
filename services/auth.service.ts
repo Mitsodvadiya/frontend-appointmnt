@@ -89,6 +89,12 @@ export const AuthService = {
     return response.data;
   },
 
+  // Send OTP
+  sendOtp: async (phone: string) => {
+    const response = await apiClient.post('/auth/send-otp', { phone });
+    return response.data;
+  },
+
   // 8. Get Current Profile
   getMe: async () => {
     const response = await apiClient.get('/auth/me');

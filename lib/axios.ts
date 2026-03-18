@@ -58,8 +58,8 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // If error is 401 Unauthorized and we haven't already retried
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    // If error is 401 or 403 and we haven't already retried
+    if ((error.response?.status === 401 || error.response?.status === 403) && originalRequest && !originalRequest._retry) {
       // Don't intercept auth endpoints like login or the refresh endpoint itself
       const url = originalRequest.url || '';
       if (
@@ -98,7 +98,7 @@ apiClient.interceptors.response.use(
           { withCredentials: true }
         );
 
-        const newToken = data.token;
+        const newToken = data?.data?.token || data?.token;
 
         // Update in-memory store
         const currentUser = useAppStore.getState().user;
