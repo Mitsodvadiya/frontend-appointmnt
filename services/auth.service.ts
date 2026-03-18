@@ -46,6 +46,13 @@ export const AuthService = {
     return response.data;
   },
 
+  // Resend Activation Email
+  resendActivation: async (email: string) => {
+    const response = await apiClient.post('/auth/resend-activation', { email });
+    return response.data;
+  },
+
+
   // 3. Login Web User
   login: async (data: LoginData): Promise<AuthResponse> => {
     const response = await apiClient.post('/auth/login', data);

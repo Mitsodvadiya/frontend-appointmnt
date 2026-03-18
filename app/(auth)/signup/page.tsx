@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Hospital } from "lucide-react";
+import { Hospital, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +17,17 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
+
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -32,7 +41,8 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const { registerMutation } = useAuth();
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
+  const { registerMutation, resendActivationMutation } = useAuth();
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -44,11 +54,18 @@ export default function SignupPage() {
   });
 
   function onSubmit(data: SignupFormValues) {
-    registerMutation.mutate({
-      name: data.name,
-      email: data.email,
-      password: data.password,
-    });
+    registerMutation.mutate(
+      {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      },
+      {
+        onSuccess: () => {
+          setIsSuccessDialogOpen(true);
+        },
+      }
+    );
   }
 
   return (
@@ -142,7 +159,7 @@ export default function SignupPage() {
             size="lg"
             disabled={registerMutation.isPending}
           >
-            {registerMutation.isPending ? "Creating Account..." : "Sign Up"}
+            {registerMutation.isPending ? "Sending Mail..." : "Send Mail"}
           </Button>
 
           <div className="text-center text-sm">
@@ -153,6 +170,42 @@ export default function SignupPage() {
           </div>
         </form>
       </Form>
+
+      <Dialog open={isSuccessDialogOpen} onOpenChange={setIsSuccessDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Registration Successful
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-base">
+              Mail is sent! Please check your inbox for instructions on how to create and activate your account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-4">
+            <Button 
+              type="button"
+              onClick={() => window.open("https://mail.google.com/mail/u/0/#inbox", "_blank")} 
+              className="w-full"
+            >
+              Open Gmail
+            </Button>
+            <Button 
+              onClick={() => {
+                const email = form.getValues().email;
+                if (email) {
+                  resendActivationMutation.mutate(email);
+                }
+              }}
+              disabled={resendActivationMutation.isPending}
+              variant="outline"
+              className="w-full"
+            >
+              {resendActivationMutation.isPending ? "Resending..." : "Resend Mail"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

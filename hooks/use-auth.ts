@@ -77,6 +77,20 @@ export const useAuth = () => {
     },
   });
 
+  const resendActivationMutation = useMutation({
+    mutationFn: (email: string) => AuthService.resendActivation(email),
+    onSuccess: () => {
+      toast.success('Activation email sent successfully.');
+    },
+    onError: (error: any) => {
+      const errRes = error.response?.data;
+      const msg = (errRes?.error && typeof errRes.error === 'string') 
+        ? errRes.error 
+        : (errRes?.message || "Failed to resend activation email.");
+      toast.error(msg);
+    },
+  });
+
   const logoutMutation = useMutation({
     mutationFn: () => AuthService.logout(),
     onSuccess: () => {
@@ -126,6 +140,7 @@ export const useAuth = () => {
     loginMutation,
     registerMutation,
     activateMutation,
+    resendActivationMutation,
     logoutMutation,
     forgotPasswordMutation,
     resetPasswordMutation,
