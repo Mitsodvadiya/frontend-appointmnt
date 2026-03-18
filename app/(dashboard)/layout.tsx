@@ -129,8 +129,8 @@ export default function DashboardLayout({
                       </p>
                     </div>
                   </DropdownMenuLabel>
-                  <DropdownMenuItem>
-                    Profile Settings
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">Profile Settings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     Clinic Details

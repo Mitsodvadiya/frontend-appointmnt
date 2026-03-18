@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export const useAuth = () => {
-  const { setAuth, logout, user } = useAppStore();
+  const { setAuth, logout, user, token, clinic } = useAppStore();
   const queryClient = useQueryClient();
 
   const router = useRouter();
@@ -136,6 +136,25 @@ export const useAuth = () => {
     },
   });
 
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: { name?: string; phone?: string }) => AuthService.updateMe(data),
+    onSuccess: (response) => {
+      toast.success('Profile updated successfully.');
+      if (response && user) {
+        // Update user inside store
+        setAuth({ ...user, name: response.name || user.name, phone: response.phone || user.phone }, token!, clinic || null);
+      }
+    },
+    onError: (error: any) => {
+      const errRes = error.response?.data;
+      const msg = (errRes?.error && typeof errRes.error === 'string') 
+        ? errRes.error 
+        : (errRes?.message || "Failed to update profile.");
+      toast.error(msg);
+    },
+  });
+
+
   return {
     loginMutation,
     registerMutation,
@@ -144,6 +163,7 @@ export const useAuth = () => {
     logoutMutation,
     forgotPasswordMutation,
     resetPasswordMutation,
+    updateProfileMutation,
     isAuthenticated: !!user,
   };
 };
