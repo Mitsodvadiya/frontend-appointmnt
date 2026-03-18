@@ -11,6 +11,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ClinicService, ActivateMemberData } from "@/services/clinic.service";
 import { useAppStore } from "@/store/use-app-store";
 import { toast } from "sonner";
+import { DoctorScheduleSetup } from "@/components/auth/doctor-schedule-setup";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +39,7 @@ export default function CreatePasswordForm() {
   const token = searchParams.get("token");
   const router = useRouter();
   const [isSuccess, setIsSuccess] = React.useState(false);
+  const [authData, setAuthData] = React.useState<any>(null);
   const { setAuth } = useAppStore();
 
   const activateMutation = useMutation({
@@ -48,6 +50,7 @@ export default function CreatePasswordForm() {
       const payload = response.data || response;
       if (payload.user && payload.token) {
         setAuth(payload.user, payload.token, payload.clinic);
+        setAuthData(payload);
         toast.success("Account activated successfully!");
         setIsSuccess(true);
       } else {
@@ -84,6 +87,16 @@ export default function CreatePasswordForm() {
   }
 
   if (isSuccess) {
+    if (authData?.user?.role === 'DOCTOR') {
+      return (
+        <DoctorScheduleSetup 
+          clinicId={authData.clinic.id} 
+          doctorId={authData.user.id} 
+          onComplete={() => router.push("/dashboard")} 
+        />
+      );
+    }
+
     return (
       <div className="flex flex-col gap-6 text-center items-center">
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-2">

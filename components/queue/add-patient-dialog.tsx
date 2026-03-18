@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -35,6 +35,8 @@ import { toast } from "sonner";
 import { PatientService } from "@/services/patient.service";
 import { AuthService } from "@/services/auth.service";
 import { QueueService } from "@/services/queue.service";
+import { ClinicService } from "@/services/clinic.service";
+import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/use-app-store";
 
 // Flow States
@@ -77,11 +79,31 @@ export function AddPatientDialog() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [initialPatientData, setInitialPatientData] = useState<Patient | null>(null);
   const [isExistingPatient, setIsExistingPatient] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   
   const [phone, setPhone] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+
+  // Fetch doctors
+  const { data: membersResponse } = useQuery({
+    queryKey: ["clinicMembers", clinic?.id],
+    queryFn: () => ClinicService.getClinicMembers(clinic!.id),
+    enabled: !!clinic?.id,
+  });
+
+  const doctors = React.useMemo(() => {
+    if (!membersResponse?.data) return [];
+    return membersResponse.data.filter((m: any) => m.role === "DOCTOR");
+  }, [membersResponse]);
+
+  // Auto-select if only 1 doctor
+  React.useEffect(() => {
+    if (doctors.length === 1 && !selectedDoctorId) {
+      setSelectedDoctorId(doctors[0].user?.id || doctors[0].userId);
+    }
+  }, [doctors, selectedDoctorId]);
 
   // Forms
   const searchForm = useForm<z.infer<typeof searchSchema>>({
@@ -167,18 +189,26 @@ export function AddPatientDialog() {
     }
   };
 
-  const onGenerateToken = async () => {
+  const onGenerateToken = async (overridePatientId?: string) => {
     setIsSubmitting(true);
     try {
-      if (!patient?.id || !user?.id || !clinic?.id) {
+      const finalPatientId = overridePatientId || patient?.id;
+      
+      if (!finalPatientId || !clinic?.id) {
         toast.error("Missing critical data for token generation. Ensure you are logged in and in a clinic.");
         return;
       }
 
+      const assignedDoctorId = selectedDoctorId || user?.id;
+      if (!assignedDoctorId) {
+        toast.error("Please select a doctor.");
+        return;
+      }
+
       const response = await QueueService.createToken({
-        doctorId: user.id, // currently assumes logged in user is the doctor
+        doctorId: assignedDoctorId,
         clinicId: clinic.id,
-        patientId: patient.id,
+        patientId: finalPatientId,
         reason: "Routine Checkup",
         source: "WALK_IN"
       });
@@ -262,6 +292,8 @@ export function AddPatientDialog() {
     if (!patient) return;
     setIsSubmitting(true);
     try {
+      let resolvedPatientId = patient.id;
+
       if (isExistingPatient) {
         // Update flow
         const response = await PatientService.updateAndVerify(patient.id, {
@@ -276,6 +308,7 @@ export function AddPatientDialog() {
 
         if (response && response.patient) {
           setPatient(response.patient);
+          resolvedPatientId = response.patient.id;
         }
         toast.success("Patient updated successfully!");
       } else {
@@ -292,11 +325,12 @@ export function AddPatientDialog() {
         
         if (response && response.data) {
           setPatient(response.data);
+          resolvedPatientId = response.data.id;
         }
         toast.success("Patient created successfully!");
       }
       
-      await onGenerateToken();
+      await onGenerateToken(resolvedPatientId);
     } catch (error: any) {
       otpForm.setError("otp", { message: error.response?.data?.error || error.response?.data?.message || "Failed to verify OTP" });
     } finally {
@@ -438,7 +472,28 @@ export function AddPatientDialog() {
                   )}
                 />
 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {doctors.length > 1 && (
+                  <div className="space-y-2 pt-2">
+                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Assign to Doctor *
+                    </label>
+                    <select 
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                      value={selectedDoctorId || ""}
+                      onChange={(e) => setSelectedDoctorId(e.target.value)}
+                      required
+                    >
+                      <option value="" disabled>Select a doctor</option>
+                      {doctors.map((doc: any) => (
+                        <option key={doc.id} value={doc.user?.id || doc.userId}>
+                          {doc.user?.name || doc.name || "Doctor"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full mt-4" disabled={isSubmitting || (doctors.length > 1 && !selectedDoctorId)}>
                   {isSubmitting 
                     ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
                     : (isExistingPatient 

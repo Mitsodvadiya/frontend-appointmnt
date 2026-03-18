@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hospital, LayoutDashboard, Users, Calendar, Settings, LogOut, Menu, Bell } from "lucide-react";
+import { Hospital, LayoutDashboard, Users, Calendar, Settings, LogOut, Menu, Bell, Building2 } from "lucide-react";
 
 import { useAppStore } from "@/store/use-app-store";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,6 +32,7 @@ export default function DashboardLayout({
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Queue", href: "/queue", icon: Users },
+    { name: "Staff", href: "/staff", icon: Building2 },
     { name: "Appointments", href: "/appointments", icon: Calendar },
     { name: "Settings", href: "/settings", icon: Settings },
   ];

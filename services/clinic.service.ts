@@ -42,5 +42,9 @@ export const ClinicService = {
   activateMember: async (data: ActivateMemberData) => {
     const response = await apiClient.post('/clinic/activate-member', data);
     return response.data;
+  },
+  getClinicMembers: async (clinicId: string) => {
+    const response = await apiClient.get(`/clinic/${clinicId}/members`);
+    return response.data;
   }
 };
